@@ -49,7 +49,7 @@ int main()
 
     // 1. Create two large matrices each with 1e6 rows and 16 columns
     const int rows = 1e6;
-    const int cols = 8;
+    const int cols = 16;
     const int msize = rows*cols;
     double *matrixA = new double[msize];
     double *matrixB = new double[msize];
