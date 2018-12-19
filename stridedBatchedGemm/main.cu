@@ -75,7 +75,7 @@ int main()
     cublasDgemmStridedBatched(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N, cols, cols, batch_size,
                               &alpha, cu_matrixA, rows, batch_size,
                                       cu_matrixB, rows, batch_size,
-                              &beta,  cu_matrixC, cols, cols, rows/batch_size);
+                              &beta,  cu_matrixC, cols, cols*cols, rows/batch_size);
 
     // 5. add up all small matrices to a result matrix
     int blocks  = 1024;   
