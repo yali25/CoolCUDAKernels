@@ -69,40 +69,15 @@ int main()
     cudaMemcpy(cu_matrixA, matrixA, msize*sizeof(double), cudaMemcpyHostToDevice);
     cudaMemcpy(cu_matrixB, matrixB, msize*sizeof(double), cudaMemcpyHostToDevice);
 
-    // 4. Setup the pointer arrays to the device memory
-    double **pp_mA = new double*[rows/batch_size];
-    double **pp_mB = new double*[rows/batch_size];
-    double **pp_mC = new double*[rows/batch_size];
-
-    // iterate over the matrices A and B and divide the matrices into (rows/batch_size) smaller matrices
-    for(int i=0, counter=0, c_count=0; i<rows; i+=batch_size,counter++,c_count+=(cols*cols))
-    {
-       pp_mA[counter] = cu_matrixA+i;
-       pp_mB[counter] = cu_matrixB+i;
-       pp_mC[counter] = cu_matrixC+c_count; 
-    }
-
-    // 5. transfer the pointer arrays to the device memory
-    const size_t pp_size = rows/batch_size*sizeof(double*);
-    double **cu_pp_mA;
-    double **cu_pp_mB;
-    double **cu_pp_mC;
-    cudaMalloc(&cu_pp_mA, pp_size);
-    cudaMalloc(&cu_pp_mB, pp_size);
-    cudaMalloc(&cu_pp_mC, pp_size);
-    cudaMemcpy(cu_pp_mA, pp_mA, pp_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(cu_pp_mB, pp_mB, pp_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(cu_pp_mC, pp_mC, pp_size, cudaMemcpyHostToDevice);
-
-    // 6. call gemmBatched 
+    // 4. call gemmBatched 
     const double alpha = 1.0;
     const double beta  = 0.0;
-    cublasDgemmBatched(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N, cols, cols, batch_size,
-                      &alpha, (const double**) cu_pp_mA, rows,
-                              (const double**) cu_pp_mB, rows,
-                      &beta, cu_pp_mC, cols, rows/batch_size);
+    cublasDgemmStridedBatched(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_N, cols, cols, batch_size,
+                              &alpha, cu_matrixA, rows, batch_size,
+                                      cu_matrixB, rows, batch_size,
+                              &beta,  cu_matrixC, cols, cols, rows/batch_size);
 
-    // 7. add up all small matrices to a result matrix
+    // 5. add up all small matrices to a result matrix
     int blocks  = 1024;   
     int threads = 64;
     int step_size        = floor(((blocks*threads) / (double)(cols*cols)));
@@ -116,7 +91,7 @@ int main()
     double *cpu_result_buffer = new double[cols*cols];
     cudaMemcpy(cpu_result_buffer, result, cols*cols*sizeof(double), cudaMemcpyDeviceToHost);
 
-    // 8. Print the result square matrix 
+    // 6. Print the result square matrix 
     for(int i=0;i<cols;i++)
     {
       for(int j=0;j<cols;j++)
